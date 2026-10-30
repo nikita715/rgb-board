@@ -1,0 +1,21 @@
+# Copy to config.toml on the Pi (~/matrix/rgb-board/config.toml). Any key can be omitted to use the default.
+
+[matrix]
+rows = 32
+cols = 64
+brightness = 15
+gpio_slowdown = 3
+hardware_mapping = "adafruit-hat"
+
+[server]
+host = "0.0.0.0"
+port = 8080
+default_mode = "serial"  # clock | weather | serial | "" (nothing on start)
+
+[weather]
+api_key = "<openweathermap api key>"
+city = "Saint Petersburg,RU"
+refresh_seconds = 600
+
+[style]
+color = [120, 100, 200]

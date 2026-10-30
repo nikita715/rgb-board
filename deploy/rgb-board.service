@@ -1,0 +1,15 @@
+[Unit]
+Description=RGB matrix board
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+# Root is required for GPIO access; rgbmatrix drops to 'daemon' after init.
+User=root
+WorkingDirectory=/home/nikita/matrix/rgb-board
+ExecStart=/usr/bin/python3 -u -m rgbboard
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
