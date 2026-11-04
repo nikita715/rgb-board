@@ -4,19 +4,13 @@
       { "matcher": "startup|resume", "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh start" }] }
     ],
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh thinking" }] }
-    ],
-    "PreToolUse": [
-      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh tool" }] }
-    ],
-    "PostToolUse": [
-      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh thinking" }] }
+      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh working" }] }
     ],
     "Notification": [
-      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh waiting" }] }
+      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh attention" }] }
     ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh done" }] }
+      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh attention" }] }
     ],
     "SessionEnd": [
       { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh end" }] }

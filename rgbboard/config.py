@@ -27,8 +27,6 @@ DEFAULTS = {
     },
     "claude": {
         "enabled": True,
-        "done_seconds": 4,
-        "sleep_minutes": 10,
     },
 }
 

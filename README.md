@@ -34,21 +34,15 @@ Open http://192.168.0.103:80## Claude Code plugin
 The default `clawd` mode shows Clawd on the left, a small clock top-right and the weather bottom-right.
 `claude-plugin/` is a Claude Code plugin whose hooks tell the board what Claude is doing, and Clawd acts it out:
 
-| Claude Code | Clawd |
+| Hook | Clawd |
 |---|---|
-| session start | waves, "hi!" |
-| thinking | walks, dots |
-| Read / Grep / Glob | magnifying glass |
-| Edit / Write | typing lines |
-| Bash / PowerShell | terminal prompt |
-| WebFetch / WebSearch | spinning globe |
-| Agent / Task | three tiny Clawds |
-| waiting for you | jumps, "!" |
-| done | happy, check mark, then idle (blinks, looks around) |
-| no activity for `sleep_minutes` | sleeps, "z z z" |
+| `SessionStart` | waves, then stands and blinks |
+| `UserPromptSubmit` | juggles |
+| `Notification`, `Stop` | jumps (your turn) |
+| `SessionEnd` | crawls off the left edge |
 
-If another mode is on (text, a drawing, the big clock), Claude takes the panel over and gives it back after
-"done" (`done_seconds`) or session end.
+If another mode is on (text, a drawing, the big clock), Claude takes the panel over and gives it back
+once Clawd has crawled away.
 
 ```sh
 claude plugin marketplace add ~/IdeaProjects/rgb-board
@@ -60,15 +54,12 @@ from Claude Code. Toggle the plugin with `/plugin`, or the indicator on the pane
 web panel. Board address: `RGB_BOARD_URL` (default `http://192.168.0.103:8080`). The hooks run curl in the
 background with all output discarded, so they cost no tokens and never block Claude.
 
-background
-with all output discarded, so they cost no tokens and never block Claude.
-
 ## API (port 8080)
 
 | Endpoint | |
 |---|---|
 | `POST /draw` | show an image (PNG body); resized to the panel if needed |
-| `/claude?state=start\|thinking\|tool\|waiting\|done\|end\|sleep[&tool=Name]` | Claude Code indicator |
+| `/claude?state=start\|working\|attention\|end` | Claude Code indicator |
 | `/claude/enabled?value=0\|1` | turn the indicator on/off |
 | `/clawd`, `/clock`, `/weather`, `/serial` | switch mode (`serial` alternates clock and weather) |
 | `/print?text=hello` | static text |

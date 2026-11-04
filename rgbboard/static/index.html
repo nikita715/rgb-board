@@ -158,17 +158,10 @@
     <span class="track"></span>
   </label>
   <div class="previews">
-    <button data-claude="start">Старт</button>
-    <button data-claude="thinking">Думает</button>
-    <button data-claude="waiting">Ждёт</button>
-    <button data-claude="done">Готово</button>
-    <button data-claude="tool" data-tool-name="Read">Читает</button>
-    <button data-claude="tool" data-tool-name="Edit">Пишет код</button>
-    <button data-claude="tool" data-tool-name="Bash">Терминал</button>
-    <button data-claude="tool" data-tool-name="WebSearch">Веб</button>
-    <button data-claude="tool" data-tool-name="Agent">Агенты</button>
-    <button data-claude="sleep">Спит</button>
-    <button data-claude="end">Конец</button>
+    <button data-claude="start">Машет</button>
+    <button data-claude="working">Жонглирует</button>
+    <button data-claude="attention">Прыгает</button>
+    <button data-claude="end">Уползает</button>
   </div>
   <div class="hint">Кнопки — предпросмотр анимаций. Выключенный индикатор игнорирует сигналы плагина. Часы и погода — в правых углах режима Clawd.</div>
 </section>
@@ -220,7 +213,6 @@ function latest(send) {
 
 // --- Status -----------------------------------------------------------------
 
-const TOOL_KINDS = { Read: "read", Edit: "edit", Bash: "bash", WebSearch: "web", Agent: "agent" };
 const MODE_LABELS = { clawd: "Clawd", clock: "часы", weather: "погода", serial: "часы + погода", text: "текст", draw: "рисунок", claude: "Claude" };
 
 function setOnline(ok) {
@@ -236,8 +228,7 @@ function showStatus(status) {
   $("claude-enabled").checked = status.claude_enabled;
   document.querySelectorAll("[data-claude]").forEach((b) => {
     b.disabled = !status.claude_enabled;
-    const tool = b.dataset.toolName ? TOOL_KINDS[b.dataset.toolName] : null;
-    b.classList.toggle("active", b.dataset.claude === status.claude_state && tool === status.claude_tool);
+    b.classList.toggle("active", b.dataset.claude === status.claude_state);
   });
 }
 
@@ -277,8 +268,7 @@ $("claude-enabled").addEventListener("change", async (e) => {
 
 document.querySelectorAll("[data-claude]").forEach((button) => {
   button.addEventListener("click", async () => {
-    const tool = button.dataset.toolName ? "&tool=" + button.dataset.toolName : "";
-    await api("/claude?state=" + button.dataset.claude + tool);
+    await api("/claude?state=" + button.dataset.claude);
     refreshStatus();
   });
 });

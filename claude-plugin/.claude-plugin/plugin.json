@@ -1,7 +1,7 @@
 {
   "name": "rgb-board",
   "version": "0.2.0",
-  "description": "Clawd on a 64x32 RGB panel acts out what Claude Code is doing: thinking, reading, writing code, running commands, waiting for you, done",
+  "description": "Clawd on a 64x32 RGB panel: waves when a session starts, juggles while Claude works, jumps when it needs you, crawls away at the end",
   "author": { "name": "Nikita Stepochkin" },
   "keywords": ["led", "matrix", "raspberry-pi", "clawd", "status"]
 }

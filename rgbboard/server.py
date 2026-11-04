@@ -6,19 +6,19 @@ from flask import Flask, jsonify, request
 from PIL import Image
 
 from rgbboard import clawd, modes
-from rgbboard.session import Session, tool_kind
+from rgbboard.session import Session
 
 # Read at import time: after the matrix drops privileges, files under /home/nikita are unreadable.
 INDEX_HTML = (Path(__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
 
-CLAUDE_STATES = ("start", "thinking", "tool", "waiting", "done", "end", "sleep")
+CLAUDE_STATES = ("start", "working", "attention", "end")  # sent by the plugin hooks
 
 
 def create_app(display, renderer, weather_source, runner, claude_config):
     app = Flask(__name__)
 
-    session = Session(claude_config["done_seconds"], claude_config["sleep_minutes"])
-    animations = clawd.animations(renderer.size, renderer.text_font)
+    session = Session()
+    animations = clawd.animations(renderer.size)
 
     mode_args = {
         "clawd": (modes.clawd, display, renderer, weather_source, session, animations),
@@ -86,7 +86,7 @@ def create_app(display, renderer, weather_source, runner, claude_config):
     # --- Claude Code indicator ------------------------------------------------
     # Driven by the Claude Code plugin hooks. Events set what Clawd acts out in the
     # "clawd" mode. If another mode (text, a drawing, the big clock) is on, Claude
-    # takes the panel over and gives it back after "done" (with a pause) or "end".
+    # takes the panel over and gives it back once Clawd has crawled away on "end".
 
     claude = {"enabled": claude_config["enabled"], "resume": None, "generation": 0}
     claude_lock = threading.Lock()
@@ -102,7 +102,7 @@ def create_app(display, renderer, weather_source, runner, claude_config):
             runner.stop()
             display.clear()
 
-    def resume_after_done(generation):
+    def resume_after_end(generation):
         with claude_lock:
             if claude["generation"] == generation:
                 claude_resume()
@@ -112,24 +112,21 @@ def create_app(display, renderer, weather_source, runner, claude_config):
         state = request.args.get("state")
         if state not in CLAUDE_STATES:
             return jsonify({"error": f"state must be one of {', '.join(CLAUDE_STATES)}"}), 400
-        tool = tool_kind(request.args.get("tool")) if state == "tool" else None
         with claude_lock:
             if not claude["enabled"]:
                 return jsonify({"status": "ignored"})
             claude["generation"] += 1
-            session.set("idle" if state == "end" else state, tool)
+            session.set(state)
             if state == "end":
-                claude_resume()
-                return jsonify({"status": state})
-            if runner.name != "clawd":
+                if claude["resume"] is not None:
+                    timer = threading.Timer(
+                        animations["end"].intro_seconds, resume_after_end, (claude["generation"],))
+                    timer.daemon = True
+                    timer.start()
+            elif runner.name != "clawd":
                 claude["resume"] = runner.snapshot()
                 start_mode("clawd")
-            if state == "done" and claude["resume"] is not None:
-                timer = threading.Timer(
-                    claude_config["done_seconds"], resume_after_done, (claude["generation"],))
-                timer.daemon = True
-                timer.start()
-        return jsonify({"status": state, "tool": tool})
+        return jsonify({"status": state})
 
     @app.route("/claude/enabled")
     def claude_enabled():
@@ -146,7 +143,7 @@ def create_app(display, renderer, weather_source, runner, claude_config):
     @app.route("/status")
     def status():
         width, height = renderer.size
-        state, tool, _ = session.current()
+        state, _ = session.current()
         return jsonify({
             "mode": runner.name,
             "brightness": display.brightness,
@@ -154,7 +151,6 @@ def create_app(display, renderer, weather_source, runner, claude_config):
             "height": height,
             "claude_enabled": claude["enabled"],
             "claude_state": state,
-            "claude_tool": tool,
         })
 
     return app, start_mode

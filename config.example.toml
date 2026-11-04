@@ -22,5 +22,3 @@ color = [120, 100, 200]
 
 [claude]
 enabled = true     # Claude Code indicator; also toggled from the web panel (resets on restart)
-done_seconds = 4   # how long "done" stays before Clawd goes idle (or the panel returns to the previous mode)
-sleep_minutes = 10 # Clawd falls asleep after this long without Claude Code activity

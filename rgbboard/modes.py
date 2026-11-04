@@ -90,9 +90,8 @@ def clawd(stop, display, renderer, weather_source, session, animations):
     """Clawd acting out the Claude Code session, with the clock and weather in the corners."""
     shown = None
     while not stop.is_set():
-        state, tool, since = session.current()
-        animation = animations.get((state, tool)) or animations[(state, None)]
-        image, left = animation.at(time.monotonic() - since)
+        state, since = session.current()
+        image, left = animations[state].at(time.monotonic() - since)
         weather = weather_source.get()
         key = (id(image), renderer.clock_text(), weather)
         if key != shown:
