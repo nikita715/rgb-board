@@ -1,4 +1,5 @@
 import threading
+import time
 
 
 class ModeRunner:
@@ -83,3 +84,19 @@ def animate(stop, display, intro, loop):
                 return
             display.show(image)
             stop.wait(seconds)
+
+
+def clawd(stop, display, renderer, weather_source, session, animations):
+    """Clawd acting out the Claude Code session, with the clock and weather in the corners."""
+    shown = None
+    while not stop.is_set():
+        state, tool, since = session.current()
+        animation = animations.get((state, tool)) or animations[(state, None)]
+        image, left = animation.at(time.monotonic() - since)
+        weather = weather_source.get()
+        key = (id(image), renderer.clock_text(), weather)
+        if key != shown:
+            display.show(renderer.corner(image, weather))
+            shown = key
+        # Short waits so a new state from the hooks shows up right away.
+        stop.wait(min(left, 0.1))

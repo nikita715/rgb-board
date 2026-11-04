@@ -6,6 +6,9 @@
     "UserPromptSubmit": [
       { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh thinking" }] }
     ],
+    "PreToolUse": [
+      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh tool" }] }
+    ],
     "PostToolUse": [
       { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh thinking" }] }
     ],

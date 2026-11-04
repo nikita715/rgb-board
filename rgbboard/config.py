@@ -15,7 +15,7 @@ DEFAULTS = {
     "server": {
         "host": "0.0.0.0",
         "port": 8080,
-        "default_mode": "serial",
+        "default_mode": "clawd",
     },
     "weather": {
         "api_key": "",
@@ -28,6 +28,7 @@ DEFAULTS = {
     "claude": {
         "enabled": True,
         "done_seconds": 4,
+        "sleep_minutes": 10,
     },
 }
 

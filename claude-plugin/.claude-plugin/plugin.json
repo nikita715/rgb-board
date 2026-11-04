@@ -1,5 +1,7 @@
 {
   "name": "rgb-board",
-  "version": "0.1.0",
-  "description": "Shows what Claude Code is doing on the RGB board: thinking, waiting for you, done"
+  "version": "0.2.0",
+  "description": "Clawd on a 64x32 RGB panel acts out what Claude Code is doing: thinking, reading, writing code, running commands, waiting for you, done",
+  "author": { "name": "Nikita Stepochkin" },
+  "keywords": ["led", "matrix", "raspberry-pi", "clawd", "status"]
 }
