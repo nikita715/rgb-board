@@ -1,5 +1,6 @@
 from rgbboard import config
 from rgbboard.display import Display
+from rgbboard.led_matrix import LedMatrixDisplay
 from rgbboard.modes import ModeRunner
 from rgbboard.render import Renderer
 from rgbboard.server import create_app
@@ -10,8 +11,12 @@ def main():
     cfg = config.load()
     # Load fonts before the matrix: it drops root privileges to 'daemon' on init,
     # and daemon can't read files under /home/nikita.
-    renderer = Renderer((cfg["matrix"]["cols"], cfg["matrix"]["rows"]), cfg["style"]["color"])
-    display = Display(cfg["matrix"])
+    size = (cfg["matrix"]["cols"], cfg["matrix"]["rows"])
+    renderer = Renderer(size, cfg["style"]["color"])
+    if cfg["matrix"]["backend"] == "led-matrix":
+        display = LedMatrixDisplay(cfg["led_matrix"]["url"], size, cfg["led_matrix"]["brightness"])
+    else:
+        display = Display(cfg["matrix"])
     weather_source = Weather(**cfg["weather"])
     runner = ModeRunner()
 

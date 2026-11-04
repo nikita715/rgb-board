@@ -1,15 +1,20 @@
 # Copy to config.toml on the Pi (~/matrix/rgb-board/config.toml). Any key can be omitted to use the default.
 
 [matrix]
+backend = "rgbmatrix"   # rgbmatrix: drive GPIO directly | led-matrix: draw through sshcrack/led-matrix
 rows = 32
 cols = 64
 brightness = 15
 gpio_slowdown = 3
 hardware_mapping = "adafruit-hat"
 
+[led_matrix]            # used with backend = "led-matrix"
+url = "http://127.0.0.1:8080"
+brightness = 100        # dims Clawd on top of led-matrix's own brightness
+
 [server]
 host = "0.0.0.0"
-port = 8080
+port = 8081             # 8080 belongs to led-matrix
 default_mode = "clawd"  # clawd | clock | weather | serial | "" (nothing on start)
 
 [weather]

@@ -5,6 +5,6 @@
 # discarded, so the hook never slows Claude down, never fails, and adds nothing
 # to Claude's context. Board address: RGB_BOARD_URL (default below).
 
-URL="${RGB_BOARD_URL:-http://192.168.0.103:8080}"
+URL="${RGB_BOARD_URL:-http://192.168.0.103:8081}"
 curl -s -m 1 "$URL/claude?state=$1" </dev/null >/dev/null 2>&1 &
 exit 0

@@ -9,6 +9,7 @@ Clawd (the Claude Code mascot) acting out your Claude Code session, with a clock
 - `config.example.toml` — settings; the real `config.toml` lives only on the Pi
 - `deploy/rgb-board.service` — systemd unit
 - `deploy.sh` — rsync to the Pi and restart the service
+- `led-matrix-plugin/` — plugin for running alongside led-matrix (see below)
 - `.claude-plugin/marketplace.json` + `claude-plugin/` — the Claude Code plugin (the repo root is its marketplace)
 
 ## Pi prerequisites
@@ -29,7 +30,28 @@ Logs: `ssh nikita@192.168.0.103 journalctl -u rgb-board -f`
 
 ## Web panel
 
-Open http://192.168.0.103:80## Claude Code plugin
+Open http://192.168.0.103:8081
+
+## Alongside led-matrix
+
+With `backend = "led-matrix"` in `[matrix]`, rgbboard doesn't touch GPIO. It shares the panel with
+[sshcrack/led-matrix](https://github.com/sshcrack/led-matrix), which plays its own scenes, and Clawd takes
+over only for a Claude Code session: from `SessionStart` until he has crawled away on `SessionEnd`. Other
+rgbboard modes (text, drawings, clock) take the panel while they run; `/off` gives it back.
+
+- `led-matrix-plugin/ExternalFrame/` — a led-matrix plugin whose `external_frame` scene shows frames sent
+  over UDP (port 8080, plugin id `0x10`, raw RGB of the panel size).
+- rgbboard puts that scene on screen through led-matrix's Scene Lab (`/scene_lab/start`, a heartbeat every
+  15s, `/scene_lab/stop`). If rgbboard dies, led-matrix takes the panel back within 45s.
+
+Build the plugin on the Pi (it must match the installed led-matrix version; rebuild after upgrading it):
+
+```sh
+~/matrix/rgb-board/led-matrix-plugin/setup-pi.sh      # once: sources + vcpkg deps, takes a while
+~/matrix/rgb-board/led-matrix-plugin/build-on-pi.sh   # builds, installs and restarts led-matrix
+```
+
+## Claude Code plugin
 
 The default `clawd` mode shows Clawd on the left, a small clock top-right and the weather bottom-right.
 `claude-plugin/` is a Claude Code plugin whose hooks tell the board what Claude is doing, and Clawd acts it out:
@@ -51,10 +73,10 @@ claude plugin install rgb-board@rgb-board-local
 
 `/rgb-board:board [clawd|clock|weather|serial|off|brightness N|claude on|off|status]` controls the board
 from Claude Code. Toggle the plugin with `/plugin`, or the indicator on the panel side with the switch in the
-web panel. Board address: `RGB_BOARD_URL` (default `http://192.168.0.103:8080`). The hooks run curl in the
+web panel. Board address: `RGB_BOARD_URL` (default `http://192.168.0.103:8081`). The hooks run curl in the
 background with all output discarded, so they cost no tokens and never block Claude.
 
-## API (port 8080)
+## API (port 8081)
 
 | Endpoint | |
 |---|---|

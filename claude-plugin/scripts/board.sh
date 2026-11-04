@@ -5,7 +5,7 @@
 #   claude on|off                            show / ignore Claude Code activity
 #   status (default)                         print the board status
 
-URL="${RGB_BOARD_URL:-http://192.168.0.103:8080}"
+URL="${RGB_BOARD_URL:-http://192.168.0.103:8081}"
 case "${1:-status}" in
   clawd|clock|weather|serial|off|status) path="/$1" ;;
   brightness) path="/brightness?value=$2" ;;

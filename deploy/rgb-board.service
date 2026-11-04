@@ -1,7 +1,7 @@
 [Unit]
 Description=RGB matrix board
 Wants=network-online.target
-After=network-online.target
+After=network-online.target led-matrix.service
 
 [Service]
 # Root is required for GPIO access; rgbmatrix drops to 'daemon' after init.

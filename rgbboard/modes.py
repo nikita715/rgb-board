@@ -91,7 +91,15 @@ def clawd(stop, display, renderer, weather_source, session, animations):
     shown = None
     while not stop.is_set():
         state, since = session.current()
-        image, left = animations[state].at(time.monotonic() - since)
+        elapsed = time.monotonic() - since
+        if display.shared and (state == "idle" or (state == "end" and elapsed >= animations["end"].intro_seconds)):
+            # No Claude session: let led-matrix show its own scenes.
+            if shown != "released":
+                display.release()
+                shown = "released"
+            stop.wait(0.1)
+            continue
+        image, left = animations[state].at(elapsed)
         weather = weather_source.get()
         key = (id(image), renderer.clock_text(), weather)
         if key != shown:

@@ -1,13 +1,18 @@
 import threading
 
-from rgbmatrix import RGBMatrix, RGBMatrixOptions
-
 
 class Display:
+    """Drives the panel directly over GPIO with the rgbmatrix binding."""
+
+    shared = False  # rgbboard owns the panel; see LedMatrixDisplay
+
     def __init__(self, matrix_config):
+        from rgbmatrix import RGBMatrix, RGBMatrixOptions
+
         options = RGBMatrixOptions()
         for key, value in matrix_config.items():
-            setattr(options, key, value)
+            if key != "backend":
+                setattr(options, key, value)
         self.matrix = RGBMatrix(options=options)
         # Draw into an offscreen canvas and swap on vsync to avoid flicker.
         self.canvas = self.matrix.CreateFrameCanvas()

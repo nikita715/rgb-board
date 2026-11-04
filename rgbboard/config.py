@@ -6,15 +6,20 @@ FONTS = ROOT / "fonts"
 
 DEFAULTS = {
     "matrix": {
+        "backend": "rgbmatrix",  # rgbmatrix (GPIO) | led-matrix (through sshcrack/led-matrix)
         "rows": 32,
         "cols": 64,
         "brightness": 15,
         "gpio_slowdown": 3,
         "hardware_mapping": "adafruit-hat",
     },
+    "led_matrix": {
+        "url": "http://127.0.0.1:8080",
+        "brightness": 100,  # on top of led-matrix's own brightness
+    },
     "server": {
         "host": "0.0.0.0",
-        "port": 8080,
+        "port": 8081,  # 8080 belongs to led-matrix
         "default_mode": "clawd",
     },
     "weather": {
