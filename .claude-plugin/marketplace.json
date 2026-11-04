@@ -1,0 +1,12 @@
+{
+  "name": "rgb-board-local",
+  "owner": { "name": "Nikita Stepochkin" },
+  "description": "RGB matrix board plugins for Claude Code",
+  "plugins": [
+    {
+      "name": "rgb-board",
+      "source": "./claude-plugin",
+      "description": "Clawd on a 64x32 RGB panel acts out what Claude Code is doing"
+    }
+  ]
+}

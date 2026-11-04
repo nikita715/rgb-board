@@ -1,5 +1,0 @@
-{
-  "name": "rgb-board-local",
-  "owner": { "name": "Nikita Stepochkin" },
-  "plugins": [{ "name": "rgb-board", "source": "./" }]
-}

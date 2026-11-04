@@ -9,6 +9,7 @@ Clawd (the Claude Code mascot) acting out your Claude Code session, with a clock
 - `config.example.toml` — settings; the real `config.toml` lives only on the Pi
 - `deploy/rgb-board.service` — systemd unit
 - `deploy.sh` — rsync to the Pi and restart the service
+- `.claude-plugin/marketplace.json` + `claude-plugin/` — the Claude Code plugin (the repo root is its marketplace)
 
 ## Pi prerequisites
 
@@ -50,7 +51,7 @@ If another mode is on (text, a drawing, the big clock), Claude takes the panel o
 "done" (`done_seconds`) or session end.
 
 ```sh
-claude plugin marketplace add ~/IdeaProjects/rgb-board/claude-plugin
+claude plugin marketplace add ~/IdeaProjects/rgb-board
 claude plugin install rgb-board@rgb-board-local
 ```
 
