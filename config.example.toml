@@ -15,7 +15,7 @@ brightness = 100        # dims Clawd on top of led-matrix's own brightness
 [server]
 host = "0.0.0.0"
 port = 8081             # 8080 belongs to led-matrix
-default_mode = "clawd"  # clawd | clock | weather | serial | "" (nothing on start)
+default_mode = "clawd"  # clawd | work | clock | weather | serial | "" (nothing on start)
 
 [weather]
 api_key = "<openweathermap api key>"

@@ -86,6 +86,21 @@ def animate(stop, display, intro, loop):
             stop.wait(seconds)
 
 
+def work(stop, display, renderer, weather_source, animation):
+    """Clawd at work regardless of Claude Code, with the clock and weather in the corners.
+    animation: one of clawd_work's, or a clawd.Rotation of all of them."""
+    start = time.monotonic()
+    shown = None
+    while not stop.is_set():
+        image, left = animation.at(time.monotonic() - start)
+        weather = weather_source.get()
+        key = (id(image), renderer.clock_text(), weather)
+        if key != shown:
+            display.show(renderer.corner(image, weather))
+            shown = key
+        stop.wait(min(left, 0.1))
+
+
 def clawd(stop, display, renderer, weather_source, session, animations):
     """Clawd acting out the Claude Code session, with the clock and weather in the corners."""
     shown = None

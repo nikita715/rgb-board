@@ -59,7 +59,7 @@ The default `clawd` mode shows Clawd on the left, a small clock top-right and th
 | Hook | Clawd |
 |---|---|
 | `SessionStart` | waves, then stands and blinks |
-| `UserPromptSubmit` | juggles |
+| `UserPromptSubmit` | works: a random animation every 5s (juggling, laptop, skipping rope, paperwork…) |
 | `Notification`, `Stop` | jumps (your turn) |
 | `SessionEnd` | crawls off the left edge |
 
@@ -71,7 +71,7 @@ claude plugin marketplace add ~/IdeaProjects/rgb-board
 claude plugin install rgb-board@rgb-board-local
 ```
 
-`/rgb-board:board [clawd|clock|weather|serial|off|brightness N|claude on|off|status]` controls the board
+`/rgb-board:board [clawd|work [animation]|clock|weather|serial|off|brightness N|claude on|off|status]` controls the board
 from Claude Code. Toggle the plugin with `/plugin`, or the indicator on the panel side with the switch in the
 web panel. Board address: `RGB_BOARD_URL` (default `http://192.168.0.103:8081`). The hooks run curl in the
 background with all output discarded, so they cost no tokens and never block Claude.
@@ -84,6 +84,8 @@ background with all output discarded, so they cost no tokens and never block Cla
 | `/claude?state=start\|working\|attention\|end` | Claude Code indicator |
 | `/claude/enabled?value=0\|1` | turn the indicator on/off |
 | `/clawd`, `/clock`, `/weather`, `/serial` | switch mode (`serial` alternates clock and weather) |
+| `/work`, `/work?anim=<id>` | Clawd at work: a random animation every 5s, or the one picked |
+| `/work/list` | the work animations: `[{id, label}]` |
 | `/print?text=hello` | static text |
 | `/brightness?value=0..100` | brightness |
 | `/off` | stop and clear |

@@ -51,6 +51,14 @@ def glyph(d, xy, rows, color):
                 d.point((x + c, y + r), fill=color)
 
 
+def juggle(size):
+    """Juggles three balls over the head."""
+    steps = 12
+    return [(C.frame(size, balls=[C.ball((i / steps + k / 3) % 1) for k in range(3)],
+                     arms_up=("right",) if i % 4 < 2 else ("left",)), 0.09)
+            for i in range(steps)]
+
+
 def laptop(size):
     """Types on a laptop: eyes down, hands take turns pressing keys."""
     rnd = random.Random(1)
@@ -214,4 +222,138 @@ def rain(size):
     return frames
 
 
-VARIANTS = (laptop, think, sparkle, orbit, run, hammer, dance, rain)
+def bezier(d, start, control, end, color, steps=80):
+    for i in range(steps + 1):
+        t = i / steps
+        x = (1 - t) ** 2 * start[0] + 2 * (1 - t) * t * control[0] + t ** 2 * end[0]
+        y = (1 - t) ** 2 * start[1] + 2 * (1 - t) * t * control[1] + t ** 2 * end[1]
+        d.point((round(x), round(y)), fill=color)
+
+
+def jump_rope(size):
+    """Skips rope: the rope swings over the head, down in front and under the feet as he hops."""
+    rope = (90, 200, 250)
+    # Per frame: lowest point of the rope, whether it passes in front of the body, how high he hops.
+    apex = [1, 9, 18, 26, 31, 22, 12, 4]
+    front = [False, True, True, True, True, False, False, False]
+    lift = [0, 0, 0, 2, 3, 2, 0, 0]
+    frames = []
+    for k in range(len(apex)):
+        image, d = canvas(size)
+        y = Y - lift[k]
+        hand_y = y + 12
+        left, right = (X + 2, hand_y), (X + 33, hand_y)
+        control = ((left[0] + right[0]) / 2, 2 * apex[k] - hand_y)  # puts the curve's middle at apex
+        if not front[k]:
+            bezier(d, left, control, right, rope)
+        body(d, y=y, pupils=(2, 5) if front[k] else (0, 5))
+        if front[k]:
+            bezier(d, left, control, right, rope)
+        frames.append((image, 0.09))
+    return frames
+
+
+def spin(size):
+    """Arms, legs and eyes come off and circle clockwise around the body, all together."""
+    core = [(c, r) for r, line in enumerate(C.BODY) for c, ch in enumerate(line)
+            if ch == "#" and not (r == 2 and c in C.ARMS["left"] + C.ARMS["right"])]
+    cx, cy, rx, ry = X + 17.5, Y + 10.5, 17, 12  # orbit of the limbs around the body
+    ex, ey, erx, ery = X + 17.5, Y + 7, 6, 3     # orbit of the eyes inside the face
+
+    def start_angle(x, y):
+        return math.atan2((y - cy) / ry, (x - cx) / rx)
+
+    # Limbs as (start angle, width, height), starting where they normally are.
+    limbs = [(math.pi, 4, 5), (0.0, 4, 5)]
+    for col in C.LEGS["stand"]:
+        limbs.append((start_angle(X + col * SX + 1, Y + 4 * SY + 2), 2, 5))
+
+    frames = []
+    n = 16
+    for i in range(n):
+        image, d = canvas(size)
+        turn = 2 * math.pi * i / n  # y points down, so a growing angle turns clockwise
+        for c, r in core:
+            x0, y0 = X + c * SX, Y + r * SY
+            d.rectangle((x0, y0, x0 + SX - 1, y0 + SY - 1), fill=OR)
+        for angle, w, h in limbs:
+            px = round(cx + rx * math.cos(angle + turn) - w / 2)
+            py = round(cy + ry * math.sin(angle + turn) - h / 2)
+            d.rectangle((px, py, px + w - 1, py + h - 1), fill=OR)
+        for angle in (math.pi, 0.0):
+            px = round(ex + erx * math.cos(angle + turn) - 1)
+            py = round(ey + ery * math.sin(angle + turn) - 1)
+            d.rectangle((px, py, px + 1, py + 2), fill=BLACK)
+        frames.append((image, 0.5 if i == 0 else 0.07))
+    return frames
+
+
+PAPER = (235, 235, 240)
+
+
+def paperwork(size):
+    """Pulls papers out of a filing cabinet on the right and tosses them over his head."""
+    cabinet, dark, light = (105, 105, 120), (70, 70, 82), (150, 150, 165)
+    rnd = random.Random(5)
+    period, every, lifetime = 24, 8, 15
+    tosses = [(b, rnd.uniform(-2.3, -1.6)) for b in range(4, period, every)]  # (frame thrown, x speed)
+    frames = []
+    for i in range(period):
+        image, d = canvas(size)
+        phase = i % every
+        drawer_open = phase <= 3
+        # The cabinet; the top drawer slides out while he rummages in it.
+        d.rectangle((38, 13, 46, 30), fill=cabinet)
+        for y in (19, 25):
+            d.line((38, y, 46, y), fill=dark)
+        drawer = 36 if drawer_open else 38
+        d.rectangle((drawer, 14, drawer + 8, 18), fill=light)
+        d.point((drawer + 4, 16), fill=dark)
+        for y in (22, 28):
+            d.point((42, y), fill=dark)
+        if phase == 4:  # throws: arm up, paper in hand
+            body(d, look=1, pupils=(0, 3), arms_up=("right",))
+            d.rectangle((33, 7, 35, 9), fill=PAPER)
+        else:
+            body(d, look=1, pupils=(0, 3) if phase in (5, 6) else (1, 5))
+            if phase <= 2:  # reaches into the drawer
+                d.rectangle((36, 17, 38, 19), fill=OR)
+            elif phase == 3:  # pulls a sheet out
+                d.rectangle((35, 14, 37, 17), fill=PAPER)
+                d.rectangle((35, 17, 37, 19), fill=OR)
+        for thrown, vx in tosses:
+            age = (i - thrown) % period
+            if age == 0 or age > lifetime:
+                continue
+            px = round(34 + vx * age)
+            py = round(8 - 3.2 * age + 0.3 * age * age)
+            if py > 29:
+                continue
+            # Flutters: flips between lying flat and edge-on.
+            w, h = (3, 2) if age % 2 else (2, 3)
+            d.rectangle((px, py, px + w - 1, py + h - 1), fill=PAPER)
+        frames.append((image, 0.1))
+    return frames
+
+
+# (id, button label, frames) — every one plays in the "working" rotation and can be picked in the work mode.
+VARIANTS = (
+    ("juggle", "Жонглирует", juggle),
+    ("laptop", "Ноутбук", laptop),
+    ("think", "Думает", think),
+    ("sparkle", "Звёздочка", sparkle),
+    ("orbit", "Спиннер", orbit),
+    ("run", "Бег", run),
+    ("hammer", "Молоток", hammer),
+    ("dance", "Танец", dance),
+    ("rain", "Код льётся", rain),
+    ("jump_rope", "Скакалка", jump_rope),
+    ("spin", "Прокрут", spin),
+    ("paperwork", "Бумаги", paperwork),
+)
+LABELS = {name: label for name, label, _ in VARIANTS}
+
+
+def animations(size):
+    """id -> looping Animation, in VARIANTS order."""
+    return {name: C.Animation([], frames(size)) for name, _, frames in VARIANTS}

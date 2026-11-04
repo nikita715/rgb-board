@@ -5,7 +5,7 @@ from pathlib import Path
 from flask import Flask, jsonify, request
 from PIL import Image
 
-from rgbboard import clawd, modes
+from rgbboard import clawd, clawd_work, modes
 from rgbboard.session import Session
 
 # Read at import time: after the matrix drops privileges, files under /home/nikita are unreadable.
@@ -18,7 +18,8 @@ def create_app(display, renderer, weather_source, runner, claude_config):
     app = Flask(__name__)
 
     session = Session()
-    animations = clawd.animations(renderer.size)
+    work_animations = clawd_work.animations(renderer.size)
+    animations = clawd.animations(renderer.size, list(work_animations.values()))
 
     mode_args = {
         "clawd": (modes.clawd, display, renderer, weather_source, session, animations),
@@ -26,9 +27,19 @@ def create_app(display, renderer, weather_source, runner, claude_config):
         "weather": (modes.weather, display, renderer, weather_source),
         "serial": (modes.serial, display, renderer, weather_source),
     }
+    work = {"animation": None}  # the one picked in the work mode; None: all of them at random
+
+    def start_work(name=None):
+        animation = work_animations[name] if name else clawd.Rotation(
+            list(work_animations.values()), clawd.WORK_ROTATION_SECONDS)
+        work["animation"] = name
+        runner.start("work", modes.work, display, renderer, weather_source, animation)
 
     def start_mode(name):
-        runner.start(name, *mode_args[name])
+        if name == "work":
+            start_work()
+        else:
+            runner.start(name, *mode_args[name])
 
     @app.route("/")
     def index():
@@ -43,6 +54,20 @@ def create_app(display, renderer, weather_source, runner, claude_config):
             claude["resume"] = None  # picked by hand: Claude events won't switch away from it
         start_mode(request.endpoint)
         return jsonify({"status": f"{request.endpoint} started"})
+
+    @app.route("/work")
+    def work_mode():
+        name = request.args.get("anim") or None
+        if name is not None and name not in work_animations:
+            return jsonify({"error": f"anim must be one of {', '.join(work_animations)}"}), 400
+        with claude_lock:
+            claude["resume"] = None  # picked by hand, like the other modes
+        start_work(name)
+        return jsonify({"status": "work started", "anim": name})
+
+    @app.route("/work/list")
+    def work_list():
+        return jsonify([{"id": name, "label": clawd_work.LABELS[name]} for name in work_animations])
 
     @app.route("/print")
     def print_text():
@@ -151,6 +176,7 @@ def create_app(display, renderer, weather_source, runner, claude_config):
             "height": height,
             "claude_enabled": claude["enabled"],
             "claude_state": state,
+            "work_anim": work["animation"] if runner.name == "work" else None,
         })
 
     return app, start_mode

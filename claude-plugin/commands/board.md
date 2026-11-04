@@ -1,6 +1,6 @@
 ---
 description: Control the RGB board (mode, brightness, Claude indicator)
-argument-hint: "[clawd|clock|weather|serial|off|brightness <0-100>|claude on|off|status]"
+argument-hint: "[clawd|work [animation]|clock|weather|serial|off|brightness <0-100>|claude on|off|status]"
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/board.sh:*)
 ---
 !`"${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" $ARGUMENTS`

@@ -115,8 +115,9 @@ class Rotation:
         return image, min(left, (slot + 1) * self.period - t)
 
 
-def animations(size):
-    """state -> Animation, for the states in session.STATES."""
+def animations(size, work):
+    """state -> Animation, for the states in session.STATES. work: the "working" animations
+    (clawd_work.animations), rotated at random."""
     f = lambda **kw: frame(size, **kw)
     blink = (f(eyes=False), 0.15)
     idle = [(f(), 3), blink, (f(), 2), (f(look=1), 1.2), (f(), 2.5), (f(look=-1), 1.2), (f(), 1.5), blink,
@@ -124,24 +125,16 @@ def animations(size):
 
     wave = [(f(arms_up=("left",)), 0.3), (f(), 0.3)] * 4
 
-    steps = 12
-    juggle = [(f(balls=[ball((i / steps + k / 3) % 1) for k in range(3)],
-                 arms_up=("right",) if i % 4 < 2 else ("left",)), 0.09)
-              for i in range(steps)]
-
     jump = [(f(), 0.2), (f(y=Y - 3, arms_up=("left", "right")), 0.1), (f(y=Y - 5, arms_up=("left", "right")), 0.2),
             (f(y=Y - 3, arms_up=("left", "right")), 0.1), (f(), 0.15)]
 
     crawl = [(f(x=x, legs="step" if i % 2 else "stand"), 0.07) for i, x in enumerate(range(X, -WIDTH - 1, -2))]
     gone = [(Image.new("RGB", size), 1)]
 
-    from rgbboard import clawd_work  # imports this module
-    working = [Animation([], juggle)] + [Animation([], variant(size)) for variant in clawd_work.VARIANTS]
-
     return {
         "idle": Animation([], idle),
         "start": Animation(wave, idle),
-        "working": Rotation(working, WORK_ROTATION_SECONDS),
+        "working": Rotation(work, WORK_ROTATION_SECONDS),
         "attention": Animation([], jump),
         "end": Animation(crawl, gone),
     }

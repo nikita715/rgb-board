@@ -127,11 +127,20 @@
   <h2>Режим</h2>
   <div class="modes">
     <button data-mode="clawd">Clawd</button>
+    <button data-mode="work">Работа</button>
     <button data-mode="clock">Часы</button>
     <button data-mode="weather">Погода</button>
     <button data-mode="serial">Часы + погода</button>
     <button data-mode="off">Выкл</button>
   </div>
+</section>
+
+<section>
+  <h2>Работа</h2>
+  <div class="modes" id="work-anims">
+    <button data-work="">Случайно</button>
+  </div>
+  <div class="hint">«Случайно» меняет анимацию каждые 5 секунд — так Clawd работает, пока Claude отвечает.</div>
 </section>
 
 <section>
@@ -159,7 +168,7 @@
   </label>
   <div class="previews">
     <button data-claude="start">Машет</button>
-    <button data-claude="working">Жонглирует</button>
+    <button data-claude="working">Работает</button>
     <button data-claude="attention">Прыгает</button>
     <button data-claude="end">Уползает</button>
   </div>
@@ -213,7 +222,7 @@ function latest(send) {
 
 // --- Status -----------------------------------------------------------------
 
-const MODE_LABELS = { clawd: "Clawd", clock: "часы", weather: "погода", serial: "часы + погода", text: "текст", draw: "рисунок", claude: "Claude" };
+const MODE_LABELS = { clawd: "Clawd", work: "работа", clock: "часы", weather: "погода", serial: "часы + погода", text: "текст", draw: "рисунок", claude: "Claude" };
 
 function setOnline(ok) {
   $("dot").className = "dot " + (ok ? "ok" : "err");
@@ -225,6 +234,8 @@ function showStatus(status) {
   $("status-text").textContent = MODE_LABELS[status.mode] ?? "выключено";
   document.querySelectorAll("[data-mode]").forEach((b) =>
     b.classList.toggle("active", b.dataset.mode === (status.mode ?? "off")));
+  document.querySelectorAll("[data-work]").forEach((b) =>
+    b.classList.toggle("active", status.mode === "work" && b.dataset.work === (status.work_anim ?? "")));
   $("claude-enabled").checked = status.claude_enabled;
   document.querySelectorAll("[data-claude]").forEach((b) => {
     b.disabled = !status.claude_enabled;
@@ -246,6 +257,25 @@ document.querySelectorAll("[data-mode]").forEach((button) => {
     refreshStatus();
   });
 });
+
+function addWorkButton(button) {
+  button.addEventListener("click", async () => {
+    const anim = button.dataset.work;
+    await api("/work" + (anim ? "?anim=" + encodeURIComponent(anim) : ""));
+    refreshStatus();
+  });
+}
+
+async function loadWorkAnimations() {
+  addWorkButton(document.querySelector('[data-work=""]'));
+  for (const { id, label } of (await api("/work/list")) ?? []) {
+    const button = document.createElement("button");
+    button.dataset.work = id;
+    button.textContent = label;
+    addWorkButton(button);
+    $("work-anims").append(button);
+  }
+}
 
 const sendBrightness = latest((value) => api("/brightness?value=" + value));
 $("brightness").addEventListener("input", (e) => {
@@ -415,6 +445,7 @@ $("grid-toggle").addEventListener("click", () => $("board").classList.toggle("no
 // --- Init -------------------------------------------------------------------
 
 setSize(width, height);
+loadWorkAnimations().then(refreshStatus);
 refreshStatus().then((status) => {
   if (!status) return;
   setSize(status.width, status.height);
