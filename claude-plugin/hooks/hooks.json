@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "startup|resume", "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh start" }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh thinking" }] }
+    ],
+    "PostToolUse": [
+      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh thinking" }] }
+    ],
+    "Notification": [
+      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh waiting" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh done" }] }
+    ],
+    "SessionEnd": [
+      { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh end" }] }
+    ]
+  }
+}

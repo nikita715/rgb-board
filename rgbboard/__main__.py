@@ -15,7 +15,7 @@ def main():
     weather_source = Weather(**cfg["weather"])
     runner = ModeRunner()
 
-    app, start_mode = create_app(display, renderer, weather_source, runner)
+    app, start_mode = create_app(display, renderer, weather_source, runner, cfg["claude"])
     if cfg["server"]["default_mode"]:
         start_mode(cfg["server"]["default_mode"])
     # load_dotenv=False: after the privilege drop, daemon can't resolve the cwd

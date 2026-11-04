@@ -25,6 +25,10 @@ DEFAULTS = {
     "style": {
         "color": [120, 100, 200],
     },
+    "claude": {
+        "enabled": True,
+        "done_seconds": 4,
+    },
 }
 
 

@@ -6,6 +6,8 @@ class ModeRunner:
 
     def __init__(self):
         self.name = None
+        self.func = None
+        self.args = ()
         self.thread = None
         self.stop_event = threading.Event()
         self.lock = threading.Lock()
@@ -16,19 +18,23 @@ class ModeRunner:
             self.stop_event = threading.Event()
             self.thread = threading.Thread(target=func, args=(self.stop_event, *args), daemon=True)
             self.thread.start()
-            self.name = name
+            self.name, self.func, self.args = name, func, args
             print(f"[modes] {name} started")
 
     def stop(self):
         with self.lock:
             self._stop()
 
+    def snapshot(self):
+        """The current mode as start() arguments, to bring it back later."""
+        return (self.name, self.func, *self.args)
+
     def _stop(self):
         if self.thread and self.thread.is_alive():
             print(f"[modes] stopping {self.name}")
             self.stop_event.set()
             self.thread.join()
-        self.name = None
+        self.name, self.func, self.args = None, None, ()
         self.thread = None
 
 
@@ -56,6 +62,24 @@ def serial(stop, display, renderer, weather_source):
         seconds += 2
 
 
-def text(stop, display, renderer, message):
-    display.show(renderer.text(message))
+def still(stop, display, image):
+    display.show(image)
     stop.wait()
+
+
+def animate(stop, display, intro, loop):
+    """Plays the intro frames once, then repeats the loop frames. Frames are (image, seconds)."""
+    for image, seconds in intro:
+        if stop.is_set():
+            return
+        display.show(image)
+        stop.wait(seconds)
+    if not loop:
+        stop.wait()
+        return
+    while not stop.is_set():
+        for image, seconds in loop:
+            if stop.is_set():
+                return
+            display.show(image)
+            stop.wait(seconds)

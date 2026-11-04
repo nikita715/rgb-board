@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RGB Board</title>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --panel: #171920;
+    --panel-2: #20232c;
+    --border: #2a2e39;
+    --text: #e8e9ee;
+    --muted: #8a8f9e;
+    --accent: #7c6cf0;
+    --accent-text: #ffffff;
+    --danger: #e5484d;
+    --ok: #30a46c;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 16px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .02em; }
+  .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.ok { background: var(--ok); }
+  .dot.err { background: var(--danger); }
+
+  section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 10px; }
+
+  button, input[type=text] {
+    font: inherit; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px;
+  }
+  button { cursor: pointer; touch-action: manipulation; }
+  button:hover { border-color: var(--muted); }
+  button:disabled { opacity: .4; cursor: default; border-color: var(--border); }
+  button.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+
+  .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row input[type=text] { flex: 1; min-width: 0; }
+
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+  .value { min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+  .board {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    background: #000;
+    border-radius: 6px;
+    overflow: hidden;
+    touch-action: none;
+  }
+  .board canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    image-rendering: pixelated;
+    cursor: crosshair;
+  }
+  .board .grid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.07) 1px, transparent 1px);
+    background-size: calc(100% / var(--w)) calc(100% / var(--h));
+  }
+  .board.no-grid .grid { display: none; }
+
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .tools .spacer { flex: 1; }
+  .palette { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .swatch {
+    width: 30px; height: 30px; padding: 0; border-radius: 6px;
+    border: 2px solid transparent; outline: 1px solid var(--border);
+  }
+  .swatch.active { border-color: var(--text); }
+  input[type=color] {
+    width: 30px; height: 30px; padding: 0; border: 0; border-radius: 6px;
+    background: none; cursor: pointer;
+  }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+  .switch input { position: absolute; opacity: 0; pointer-events: none; }
+  .switch .track {
+    flex: none; width: 44px; height: 26px; border-radius: 13px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    position: relative; transition: background .15s;
+  }
+  .switch .track::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px; border-radius: 50%; background: var(--muted);
+    transition: transform .15s, background .15s;
+  }
+  .switch input:checked + .track { background: var(--accent); border-color: var(--accent); }
+  .switch input:checked + .track::after { transform: translateX(18px); background: #fff; }
+  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .previews { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
+  .previews button { padding: 8px 4px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>RGB Board</h1>
+  <div class="status"><span class="dot" id="dot"></span><span id="status-text">…</span></div>
+</header>
+
+<section>
+  <h2>Режим</h2>
+  <div class="modes">
+    <button data-mode="clock">Часы</button>
+    <button data-mode="weather">Погода</button>
+    <button data-mode="serial">Часы + погода</button>
+    <button data-mode="off">Выкл</button>
+  </div>
+</section>
+
+<section>
+  <h2>Яркость</h2>
+  <div class="row">
+    <input type="range" id="brightness" min="1" max="100" value="15">
+    <span class="value" id="brightness-value">15</span>
+  </div>
+</section>
+
+<section>
+  <h2>Текст</h2>
+  <form class="row" id="text-form">
+    <input type="text" id="text" placeholder="Что показать" autocomplete="off">
+    <button class="primary" type="submit">Показать</button>
+  </form>
+</section>
+
+<section>
+  <h2>Индикатор Claude Code</h2>
+  <label class="switch">
+    <span>Показывать, что делает Claude</span>
+    <input type="checkbox" id="claude-enabled">
+    <span class="track"></span>
+  </label>
+  <div class="previews">
+    <button data-claude="start">Старт</button>
+    <button data-claude="thinking">Думает</button>
+    <button data-claude="waiting">Ждёт</button>
+    <button data-claude="done">Готово</button>
+    <button data-claude="end">Конец</button>
+  </div>
+  <div class="hint">Кнопки — предпросмотр анимаций. Выключенный индикатор игнорирует сигналы плагина.</div>
+</section>
+
+<section>
+  <h2>Рисование</h2>
+  <div class="board" id="board">
+    <canvas id="canvas"></canvas>
+    <div class="grid"></div>
+  </div>
+  <div class="palette" id="palette"></div>
+  <div class="tools">
+    <button data-tool="pen" class="active">Кисть</button>
+    <button data-tool="eraser">Ластик</button>
+    <button data-tool="fill">Заливка</button>
+    <span class="spacer"></span>
+    <button id="grid-toggle">Сетка</button>
+    <button id="clear">Очистить</button>
+  </div>
+  <div class="hint">Рисунок сразу появляется на панели.</div>
+</section>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// --- API --------------------------------------------------------------------
+
+async function api(path, options) {
+  try {
+    const response = await fetch(path, options);
+    setOnline(response.ok);
+    return response.ok ? response.json() : null;
+  } catch {
+    setOnline(false);
+    return null;
+  }
+}
+
+// Coalesces rapid calls: at most one request in flight, and the latest value always gets sent.
+function latest(send) {
+  let inflight = false, pending = null;
+  return async function call(...args) {
+    if (inflight) { pending = args; return; }
+    inflight = true;
+    try { await send(...args); } finally { inflight = false; }
+    if (pending) { const next = pending; pending = null; call(...next); }
+  };
+}
+
+// --- Status -----------------------------------------------------------------
+
+const MODE_LABELS = { clock: "часы", weather: "погода", serial: "часы + погода", text: "текст", draw: "рисунок", claude: "Claude" };
+
+function setOnline(ok) {
+  $("dot").className = "dot " + (ok ? "ok" : "err");
+  if (!ok) $("status-text").textContent = "нет связи";
+}
+
+function showStatus(status) {
+  if (!status) return;
+  $("status-text").textContent = MODE_LABELS[status.mode] ?? "выключено";
+  document.querySelectorAll("[data-mode]").forEach((b) =>
+    b.classList.toggle("active", b.dataset.mode === (status.mode ?? "off")));
+  $("claude-enabled").checked = status.claude_enabled;
+  document.querySelectorAll("[data-claude]").forEach((b) => {
+    b.disabled = !status.claude_enabled;
+    b.classList.toggle("active", b.dataset.claude === status.claude_state);
+  });
+}
+
+async function refreshStatus() {
+  const status = await api("/status");
+  showStatus(status);
+  return status;
+}
+
+// --- Modes, brightness, text ------------------------------------------------
+
+document.querySelectorAll("[data-mode]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    await api("/" + button.dataset.mode);
+    refreshStatus();
+  });
+});
+
+const sendBrightness = latest((value) => api("/brightness?value=" + value));
+$("brightness").addEventListener("input", (e) => {
+  $("brightness-value").textContent = e.target.value;
+  sendBrightness(e.target.value);
+});
+
+$("text-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  await api("/print?text=" + encodeURIComponent($("text").value));
+  refreshStatus();
+});
+
+// --- Claude Code indicator --------------------------------------------------
+
+$("claude-enabled").addEventListener("change", async (e) => {
+  await api("/claude/enabled?value=" + (e.target.checked ? 1 : 0));
+  refreshStatus();
+});
+
+document.querySelectorAll("[data-claude]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    await api("/claude?state=" + button.dataset.claude);
+    refreshStatus();
+  });
+});
+
+// --- Drawing ----------------------------------------------------------------
+
+const canvas = $("canvas");
+const ctx = canvas.getContext("2d", { willReadFrequently: true });
+const PALETTE = ["#ffffff", "#ff3b30", "#ff9500", "#ffcc00", "#34c759", "#00c7be", "#007aff", "#5856d6", "#af52de", "#ff2d55", "#7c6cf0", "#8e8e93"];
+
+let width = 64, height = 32;
+let color = PALETTE[0];
+let tool = "pen";
+let last = null;
+
+function setSize(w, h) {
+  width = w; height = h;
+  canvas.width = w; canvas.height = h;
+  $("board").style.setProperty("--w", w);
+  $("board").style.setProperty("--h", h);
+  $("board").style.aspectRatio = `${w} / ${h}`;
+  clearCanvas();
+}
+
+function clearCanvas() {
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, width, height);
+}
+
+const pushFrame = latest(async () => {
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  await api("/draw", { method: "POST", headers: { "Content-Type": "image/png" }, body: blob });
+});
+
+function cellAt(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: Math.min(width - 1, Math.max(0, Math.floor((e.clientX - rect.left) / rect.width * width))),
+    y: Math.min(height - 1, Math.max(0, Math.floor((e.clientY - rect.top) / rect.height * height))),
+  };
+}
+
+function plot(x, y) {
+  ctx.fillStyle = tool === "eraser" ? "#000" : color;
+  ctx.fillRect(x, y, 1, 1);
+}
+
+// Bresenham, so fast strokes don't leave gaps between pointer events.
+function line(a, b) {
+  let { x: x0, y: y0 } = a;
+  const dx = Math.abs(b.x - x0), dy = -Math.abs(b.y - y0);
+  const sx = x0 < b.x ? 1 : -1, sy = y0 < b.y ? 1 : -1;
+  let err = dx + dy;
+  while (true) {
+    plot(x0, y0);
+    if (x0 === b.x && y0 === b.y) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+}
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function floodFill({ x, y }) {
+  const image = ctx.getImageData(0, 0, width, height);
+  const data = image.data;
+  const at = (px, py) => (py * width + px) * 4;
+  const target = data.slice(at(x, y), at(x, y) + 3);
+  const fill = hexToRgb(color);
+  if (target.every((v, i) => v === fill[i])) return;
+  const same = (i) => data[i] === target[0] && data[i + 1] === target[1] && data[i + 2] === target[2];
+  const stack = [[x, y]];
+  while (stack.length) {
+    const [px, py] = stack.pop();
+    if (px < 0 || py < 0 || px >= width || py >= height) continue;
+    const i = at(px, py);
+    if (!same(i)) continue;
+    data[i] = fill[0]; data[i + 1] = fill[1]; data[i + 2] = fill[2]; data[i + 3] = 255;
+    stack.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
+  }
+  ctx.putImageData(image, 0, 0);
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  canvas.setPointerCapture(e.pointerId);
+  const cell = cellAt(e);
+  if (tool === "fill") {
+    floodFill(cell);
+  } else {
+    last = cell;
+    plot(cell.x, cell.y);
+  }
+  pushFrame();
+});
+
+canvas.addEventListener("pointermove", (e) => {
+  if (!last) return;
+  const cell = cellAt(e);
+  if (cell.x === last.x && cell.y === last.y) return;
+  line(last, cell);
+  last = cell;
+  pushFrame();
+});
+
+const endStroke = () => { if (last) { last = null; pushFrame(); refreshStatus(); } };
+canvas.addEventListener("pointerup", endStroke);
+canvas.addEventListener("pointercancel", endStroke);
+
+document.querySelectorAll("[data-tool]").forEach((button) => {
+  button.addEventListener("click", () => {
+    tool = button.dataset.tool;
+    document.querySelectorAll("[data-tool]").forEach((b) => b.classList.toggle("active", b === button));
+  });
+});
+
+function selectColor(value, swatch) {
+  color = value;
+  document.querySelectorAll(".swatch").forEach((s) => s.classList.toggle("active", s === swatch));
+  if (tool === "eraser") document.querySelector('[data-tool="pen"]').click();
+}
+
+PALETTE.forEach((value, i) => {
+  const swatch = document.createElement("button");
+  swatch.className = "swatch" + (i === 0 ? " active" : "");
+  swatch.style.background = value;
+  swatch.title = value;
+  swatch.addEventListener("click", () => selectColor(value, swatch));
+  $("palette").append(swatch);
+});
+const picker = document.createElement("input");
+picker.type = "color";
+picker.value = "#7c6cf0";
+picker.title = "Свой цвет";
+picker.addEventListener("input", () => selectColor(picker.value, null));
+$("palette").append(picker);
+
+$("clear").addEventListener("click", () => { clearCanvas(); pushFrame(); });
+$("grid-toggle").addEventListener("click", () => $("board").classList.toggle("no-grid"));
+
+// --- Init -------------------------------------------------------------------
+
+setSize(width, height);
+refreshStatus().then((status) => {
+  if (!status) return;
+  setSize(status.width, status.height);
+  $("brightness").value = status.brightness;
+  $("brightness-value").textContent = status.brightness;
+});
+setInterval(refreshStatus, 5000);
+</script>
+</body>
+</html>

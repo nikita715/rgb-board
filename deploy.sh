@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 
 # config.toml lives only on the Pi; it's excluded so --delete doesn't remove it.
 rsync -a --delete \
-  --exclude .git --exclude .idea --exclude __pycache__ --exclude config.toml \
+  --exclude .git --exclude .idea --exclude __pycache__ --exclude config.toml --exclude claude-plugin \
   ./ "$HOST:$DIR/"
 
 ssh "$HOST" "
