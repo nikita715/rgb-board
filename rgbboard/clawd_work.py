@@ -8,7 +8,7 @@ import random
 
 from PIL import Image, ImageDraw
 
-from rgbboard import clawd as C
+from rgbboard import clawd as C, pixels as P
 
 X, Y, SX, SY = C.X, C.Y, C.SX, C.SY
 OR = C.ORANGE
@@ -336,6 +336,325 @@ def paperwork(size):
     return frames
 
 
+def lerp(keys, i):
+    """Position at frame i from keyframes [(frame, x, y), ...], linear in between."""
+    for (f0, x0, y0), (f1, x1, y1) in zip(keys, keys[1:]):
+        if f0 <= i <= f1:
+            u = (i - f0) / (f1 - f0) if f1 > f0 else 0
+            return round(x0 + (x1 - x0) * u), round(y0 + (y1 - y0) * u)
+    return keys[-1][1], keys[-1][2]
+
+
+def mini(d, x, y, sx=1, sy=3, color=OR, **sprite_args):
+    """A smaller Clawd: the same sprite with sx x sy blocks instead of 2 x 5."""
+    for r, line in enumerate(C.sprite(**sprite_args)):
+        for c, ch in enumerate(line):
+            if ch == "#":
+                d.rectangle((x + c * sx, y + r * sy, x + c * sx + sx - 1, y + r * sy + sy - 1), fill=color)
+
+
+def plus(d, x, y, color):
+    d.line((x, y + 1, x + 2, y + 1), fill=color)
+    d.line((x + 1, y, x + 1, y + 2), fill=color)
+
+
+ARROW = ["#....", "##...", "###..", "####.", "#####", "##...", "#.#..", "..#.."]
+BANG = ["#", "#", "#", ".", "#"]
+QUESTION = ["###", "..#", ".##", "...", ".#."]
+CHECK = ["......#", ".....#.", "#...#..", ".#.#...", "..#...."]
+
+
+def cursor(size):
+    """A mouse cursor teases him around the panel until he jumps and eats it."""
+    keys = [(0, 64, 14), (8, 44, 12), (12, 47, 9), (16, 44, 12), (22, 20, -1), (26, 22, -1), (30, 42, 3),
+            (32, 45, 8), (34, 41, 12), (36, 45, 15), (40, 42, 10)]
+    frames = []
+    for i in range(62):
+        image, d = canvas(size)
+        cx, cy = lerp(keys, min(i, 40))
+        eaten = i >= 43
+        look = 1 if cx > 30 else -1 if cx < 10 else 0
+        pupils = (0, 3) if cy < 8 else (2, 5) if cy > 20 else (1, 4)
+        if 26 <= i < 29:  # swats at it
+            body(d, look=look, pupils=(0, 3), arms_up=("left", "right"))
+        elif 38 <= i < 40:  # crouches
+            body(d, dy=2, look=1, pupils=pupils)
+        elif 40 <= i < 44:  # jumps at it
+            body(d, x=X + 4, y=Y - 4, look=1, arms_up=("right",), pupils=(1, 4))
+        elif 44 <= i < 52:  # chews
+            body(d, dy=(i // 2) % 2, pupils=(3, 5))
+        else:
+            body(d, look=0 if eaten else look, pupils=(0, 5) if eaten else pupils)
+        if not eaten:
+            glyph(d, (cx, cy), ARROW, WHITE)
+        frames.append((image, 0.08))
+    return frames
+
+
+def golf(size):
+    """Drives the ball off the right edge; it comes back from the left and hits him on the head."""
+    shaft, ball = (170, 170, 180), WHITE
+    frames = []
+    for i in range(50):
+        image, d = canvas(size)
+        if i < 6 or 9 <= i < 10:  # addresses the ball / hits it
+            body(d, look=1, pupils=(2, 5))
+            d.line((35, 18, 40, 29), fill=shaft)
+            d.line((39, 30, 41, 30), fill=shaft)
+        elif i < 9:  # backswing
+            body(d, look=1, pupils=(2, 5), arms_up=("right",))
+            d.line((35, 12, 39, 5), fill=shaft)
+            d.line((38, 4, 40, 4), fill=shaft)
+        elif i < 36:  # watches it fly away, then waits
+            body(d, look=1, pupils=(0, 3) if i < 22 else (1, 5))
+            d.line((35, 18, 40, 29), fill=shaft)
+        else:  # dizzy, stars around the head
+            body(d, x=X + (1 if i % 2 else -1) if i < 44 else X, eyes=False)
+            for k, (ex, _) in enumerate(C.EYES):
+                x0 = X + ex * SX - 1
+                d.line((x0, Y + 6, x0 + 2, Y + 8), fill=BLACK)
+                d.line((x0, Y + 8, x0 + 2, Y + 6), fill=BLACK)
+            for k in range(3):
+                a = (i - 36) * 0.8 + k * 2 * math.pi / 3
+                d.point((round(19 + 10 * math.cos(a)), round(2 + 2 * math.sin(a))), fill=YELLOW)
+        if i < 10:
+            bx, by = 41, 29
+        elif i < 20:  # flies off the right edge
+            u = (i - 10) / 10
+            bx, by = round(41 + 26 * u), round(29 - 30 * math.sin(math.pi * u * 0.8))
+        elif i < 30:
+            bx, by = None, None
+        elif i < 36:  # comes back from the left, straight at his head
+            bx, by = lerp([(30, -2, 10), (36, 14, 5)], i)
+        else:  # bounces off and rolls back to the tee
+            bx, by = lerp([(36, 14, 5), (40, 22, -1), (43, 30, 29), (49, 41, 29)], i)
+        if bx is not None:
+            d.rectangle((bx, by, bx + 1, by + 1), fill=ball)
+        frames.append((image, 0.08))
+    return frames
+
+
+BUG = [".##.", "####", ".##."]
+
+
+def bug(size):
+    """A bug crawls in; he grabs it, eats it, and shows a green check: fixed."""
+    green, legs = (70, 210, 90), (40, 120, 50)
+    frames = []
+    for i in range(37):
+        image, d = canvas(size)
+        if i < 10:
+            body(d, look=1, pupils=(2, 5))
+            bx, by = 47 - i, 28
+        elif i < 12:  # crouches and stretches his arm to it
+            body(d, dy=2, look=1, pupils=(2, 5))
+            d.line((35, 19, 38, 26), fill=OR, width=2)
+            bx, by = 38, 28
+        elif i < 15:  # brings it to his mouth
+            body(d, look=1, pupils=(1, 5))
+            bx, by = [(34, 22), (29, 18), (None, None)][i - 12]
+        elif i < 23:  # chews
+            body(d, dy=(i // 2) % 2, pupils=(3, 5))
+            if i < 17:
+                d.point((24, Y + 12 + (i // 2) % 2), fill=legs)
+            bx = by = None
+        else:  # fixed
+            body(d, arms_up=("left", "right") if i < 27 else ())
+            if (i // 2) % 2 == 0:
+                glyph(d, (16, 0), CHECK, green)
+            bx = by = None
+        if bx is not None:
+            glyph(d, (bx, by), BUG, green)
+            if i < 12:  # little legs
+                for lx in (bx, bx + 3):
+                    d.point((lx, by + 2 + i % 2 - 0), fill=legs)
+        frames.append((image, 0.1))
+    return frames
+
+
+def clone(size):
+    """Splits into two small Clawds that argue, then merge back."""
+    frames = []
+    for i in range(48):
+        image, d = canvas(size)
+        if i < 5:
+            body(d)
+        elif i < 11:  # buzzes
+            body(d, x=X + (1 if i % 2 else -1), color=scale(OR, 1 + 0.06 * (i - 5)))
+        elif i == 11 or i == 35:  # flash
+            body(d, color=(255, 240, 225))
+        elif i < 15:  # the halves slide apart
+            u = (i - 11) / 3
+            mini(d, round(11 - 7 * u), 16, look=1)
+            mini(d, round(11 + 13 * u), 16, look=-1)
+        elif i < 31:  # argue: take turns hopping and shouting
+            left_turn = (i // 4) % 2 == 0
+            mini(d, 4, 14 if left_turn and i % 4 < 2 else 16, look=1, arms_up=("right",) if left_turn else ())
+            mini(d, 24, 14 if not left_turn and i % 4 < 2 else 16, look=-1, arms_up=("left",) if not left_turn else ())
+            if left_turn:
+                glyph(d, (12, 8), BANG, YELLOW)
+            else:
+                glyph(d, (32, 8), QUESTION, WHITE)
+        elif i < 35:  # run into each other
+            u = (i - 31) / 3
+            mini(d, round(4 + 7 * u), 16, look=1, legs="step" if i % 2 else "stand")
+            mini(d, round(24 - 13 * u), 16, look=-1, legs="stand" if i % 2 else "step")
+        elif i < 41:  # shakes it off
+            body(d, look=1 if i % 2 else -1)
+        else:
+            body(d, eyes=i != 44)
+        frames.append((image, 0.1))
+    return frames
+
+
+def pixels(size):
+    """Stretches his arm to the clock, steals its pixels one by one and stacks them on the left.
+    The tower collapses and the pixels fly back home."""
+    purple = (120, 100, 200)
+    x0 = X + 6  # moved right, to leave room for the tower
+    slots = [(0, 29), (3, 29), (6, 29), (1, 26), (4, 26), (2, 23)]
+    frames = []
+
+    def tower(d, n):
+        for sx_, sy_ in slots[:n]:
+            d.rectangle((sx_, sy_, sx_ + 1, sy_ + 1), fill=purple)
+
+    for n in range(len(slots)):
+        tx, ty = slots[n]
+        for f in range(8):
+            image, d = canvas(size)
+            tower(d, n)
+            reaching = f < 5
+            body(d, x=x0, look=1 if reaching else -1, pupils=(0, 3) if reaching else (1, 5),
+                 arms_up=("right",) if f >= 5 else ())
+            if f < 5:  # the arm stretches to the clock and back
+                reach = (0.5, 1, 1, 0.6, 0.2)[f]
+                hx, hy = round(x0 + 34 + 6 * reach), round(Y + 11 - 9 * reach)
+                d.line((x0 + 34, Y + 11, hx, hy), fill=OR, width=2)
+                if f >= 2:
+                    d.rectangle((hx, hy - 1, hx + 1, hy), fill=purple)
+            else:  # tosses it over his head onto the tower
+                u = (f - 4) / 4
+                px = round(x0 + 34 + (tx - x0 - 34) * u)
+                py = round(Y + 2 + (ty - Y - 2) * u - 14 * math.sin(math.pi * u))
+                if f < 7:
+                    d.rectangle((px, py, px + 1, py + 1), fill=purple)
+                else:
+                    d.rectangle((tx, ty, tx + 1, ty + 1), fill=purple)
+            frames.append((image, 0.08))
+    for f in range(10):  # the tower collapses, the pixels fly back to the clock
+        image, d = canvas(size)
+        body(d, x=x0, look=-1, pupils=(1, 5), arms_up=("left", "right") if f >= 6 else ())
+        u = f / 9
+        for k, (sx_, sy_) in enumerate(slots):
+            px = round(sx_ + (50 - sx_) * u)
+            py = round(sy_ + (2 - sy_) * u - 10 * math.sin(math.pi * u) + (k % 3))
+            d.rectangle((px, py, px + 1, py + 1), fill=purple)
+        frames.append((image, 0.08))
+    return frames
+
+
+FISH = ["..###.#", ".######", "..###.#"]
+BOOT = ["##..", "##..", "####", "####"]
+NULL = ["........#.#", "##..#.#.#.#", "#.#.#.#.#.#", "#.#.#.#.#.#", "#.#.###.#.#"]
+
+
+def fishing(size):
+    """Wades with a rod; catches a fish, then a boot, then null."""
+    water, wave = (25, 60, 150), (90, 150, 240)
+    rod, line = (150, 95, 50), (150, 150, 160)
+    catches = [(FISH, (150, 200, 230), "happy"), (BOOT, (130, 80, 40), "meh"), (NULL, WHITE, "huh")]
+    frames = []
+    for catch, color, mood in catches:
+        for i in range(30):
+            image, d = canvas(size)
+            yank = 13 <= i
+            tip = (46, 5) if not yank else (42, 1)
+            if i >= 20 and mood == "happy":
+                body(d, arms_up=("left", "right"))
+            elif i >= 20 and mood == "meh":
+                body(d, look=-1, pupils=(2, 4))
+            elif i >= 20:
+                body(d, look=1, pupils=(0, 3))
+                glyph(d, (19, 0), QUESTION, YELLOW)
+            else:
+                body(d, look=1, pupils=(2, 5) if i < 10 else (0, 5), eyes=i != 5,
+                     arms_up=("right",) if yank else ())
+            if 10 <= i < 13:
+                glyph(d, (19, 0), BANG, YELLOW)
+            d.line((35, 17 if not yank else 11, *tip), fill=rod)
+            for x in range(0, 47):
+                d.point((x, 29 + (1 if (x + i) % 8 < 4 else 0)), fill=water)
+                d.rectangle((x, 30, x, 31), fill=water)
+            for x in range(-(i % 8), 47, 8):
+                d.point((x, 28 + (1 if (x // 8) % 2 else 0)), fill=wave)
+            if i < 10:  # waiting: the bobber bobs
+                by = 26 + (i // 3) % 2
+                d.line((*tip, 45, by), fill=line)
+                d.point((45, by), fill=(230, 50, 50))
+                d.point((45, by + 1), fill=WHITE)
+            elif i < 13:  # a bite: it goes under
+                d.line((*tip, 45, 29), fill=line)
+            else:  # the catch on the line
+                u = min(1, (i - 13) / 6)
+                cx = round(45 + (tip[0] - 4 - 45) * u)
+                cy = round(28 + (tip[1] + 3 - 28) * u)
+                d.line((*tip, cx + 2, cy), fill=line)
+                glyph(d, (cx - (len(catch[0]) - 4 if catch is NULL else 0), cy), catch, color)
+            frames.append((image, 0.1))
+    return frames
+
+
+def gym(size):
+    """Presses a barbell; a counter goes up each rep, until he drops it and collapses."""
+    bar, plate, sweat = (170, 170, 180), (80, 80, 95), (90, 170, 255)
+
+    def barbell(d, y):
+        d.line((0, y, 39, y), fill=bar)
+        d.rectangle((1, y - 4, 3, y + 4), fill=plate)
+        d.rectangle((36, y - 4, 38, y + 4), fill=plate)
+
+    def counter(d, n, rise):
+        plus(d, 40, 9 - rise, WHITE)
+        P.text(d, (44, 8 - rise), str(n), WHITE)
+
+    heights = [17, 17, 17, 17, 16, 10, 2, 2, 10, 17, 17, 17]
+    frames = []
+    for rep in range(1, 5):
+        for f, y in enumerate(heights):
+            image, d = canvas(size)
+            if f in (3, 4):  # strains
+                y += 1 if f == 3 else -1
+                body(d, pupils=(2, 4), dy=1)
+                d.point((7, Y + 2 + f), fill=sweat)
+            else:
+                body(d, arms_up=("left", "right") if y < 12 else ())
+            barbell(d, y)
+            if f >= 6:
+                counter(d, rep, f - 6)
+            frames.append((image, 0.08))
+    for f in range(6):  # the fifth rep: shakes, can't get it up
+        image, d = canvas(size)
+        body(d, pupils=(3, 5), dy=1 + f % 2)
+        barbell(d, 16 + f % 2)
+        d.point((7, Y + 2 + f), fill=sweat)
+        d.point((31, Y + 4 + f), fill=sweat)
+        frames.append((image, 0.08))
+    for f, y in enumerate((22, 29, 26, 29)):  # drops it
+        image, d = canvas(size)
+        body(d, dy=3, pupils=(3, 5))
+        barbell(d, y)
+        frames.append((image, 0.08))
+    for f in range(8):  # lies there, exhausted
+        image, d = canvas(size)
+        body(d, dy=3, pupils=(4, 5) if f < 6 else (2, 5))
+        barbell(d, 29)
+        if f < 4:
+            d.point((30 + f, Y + 3 + f), fill=sweat)
+        frames.append((image, 0.12))
+    return frames
+
+
 # (id, button label, frames) — every one plays in the "working" rotation and can be picked in the work mode.
 VARIANTS = (
     ("juggle", "Жонглирует", juggle),
@@ -350,6 +669,13 @@ VARIANTS = (
     ("jump_rope", "Скакалка", jump_rope),
     ("spin", "Прокрут", spin),
     ("paperwork", "Бумаги", paperwork),
+    ("cursor", "Курсор", cursor),
+    ("golf", "Гольф", golf),
+    ("bug", "Ест жука", bug),
+    ("clone", "Клон", clone),
+    ("pixels", "Ворует пиксели", pixels),
+    ("fishing", "Рыбалка", fishing),
+    ("gym", "Качалка", gym),
 )
 LABELS = {name: label for name, label, _ in VARIANTS}
 
